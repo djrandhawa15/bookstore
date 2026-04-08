@@ -14,11 +14,11 @@ var connectionString = builder.Configuration.GetConnectionString("BOOKSTORE_DB")
     ?? throw new InvalidOperationException("Connection string 'BOOKSTORE_DB' not found");
 
 builder.Services.AddDbContextFactory<BookstoreDb>(options =>
-    options.UseSqlServer(connectionString, sqlServerOptions =>
-        sqlServerOptions.EnableRetryOnFailure(
+    options.UseNpgsql(connectionString, npgsqlOptions =>
+        npgsqlOptions.EnableRetryOnFailure(
             maxRetryCount: 10,
             maxRetryDelay: TimeSpan.FromSeconds(30),
-            errorNumbersToAdd: null)));
+            errorCodesToAdd: null)));
 
 builder.Services.AddQuickGridEntityFrameworkAdapter();
 
@@ -31,6 +31,9 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
+
+    var db = services.GetRequiredService<IDbContextFactory<BookstoreDb>>().CreateDbContext();
+    db.Database.Migrate();
 
     SeedData.Initialize(services);
 }

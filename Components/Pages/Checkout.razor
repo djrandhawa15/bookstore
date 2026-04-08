@@ -35,7 +35,7 @@
 
     private async Task PlaceOrder()
     {
-        Order.OrderDate = DateTime.Now;
+        Order.OrderDate = DateTime.UtcNow;
 
         context.Orders.Attach(Order);
         await context.SaveChangesAsync();
