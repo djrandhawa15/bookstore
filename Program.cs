@@ -10,8 +10,13 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 // setup Database Context
-var connectionString = builder.Configuration.GetConnectionString("BOOKSTORE_DB")
-    ?? throw new InvalidOperationException("Connection string 'BOOKSTORE_DB' not found");
+// Accept either a key-value connection string or a postgresql:// / postgres:// URL
+// Render sets DATABASE_URL automatically when a PostgreSQL database is linked
+var rawConnectionString = builder.Configuration.GetConnectionString("BOOKSTORE_DB")
+    ?? Environment.GetEnvironmentVariable("DATABASE_URL")
+    ?? throw new InvalidOperationException("No database connection string found. Set ConnectionStrings__BOOKSTORE_DB or DATABASE_URL.");
+
+var connectionString = ParseConnectionString(rawConnectionString);
 
 builder.Services.AddDbContextFactory<BookstoreDb>(options =>
     options.UseNpgsql(connectionString, npgsqlOptions =>
@@ -56,3 +61,21 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
+
+// Converts a postgresql:// or postgres:// URL to Npgsql key-value format.
+// Returns the string unchanged if it is already in key-value format.
+static string ParseConnectionString(string raw)
+{
+    if (!raw.StartsWith("postgres://") && !raw.StartsWith("postgresql://"))
+        return raw;
+
+    var uri = new Uri(raw);
+    var userInfo = uri.UserInfo.Split(':', 2);
+    var host = uri.Host;
+    var port = uri.IsDefaultPort ? 5432 : uri.Port;
+    var database = uri.AbsolutePath.TrimStart('/');
+    var username = userInfo.Length > 0 ? userInfo[0] : "";
+    var password = userInfo.Length > 1 ? userInfo[1] : "";
+
+    return $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true";
+}
