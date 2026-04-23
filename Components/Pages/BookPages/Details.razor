@@ -58,8 +58,25 @@
     </div>
 </div>
 
+<hr />
+<h4>Customers who bought this item also bought these books</h4>
+@if (recommendedBooks.Count > 0)
+{
+    <div class="d-flex flex-wrap gap-3 mt-3">
+        @foreach (var recommended in recommendedBooks)
+        {
+            <BookCard Book="recommended" />
+        }
+    </div>
+}
+else
+{
+    <p class="text-muted mt-2">No recommendations available yet. Be the first to purchase this book!</p>
+}
+
 @code {
     private Book? book;
+    private List<Book> recommendedBooks = new();
 
     [SupplyParameterFromQuery]
     private int Id { get; set; }
@@ -72,7 +89,18 @@
         if (book is null)
         {
             NavigationManager.NotFound();
+            return;
         }
+
+        recommendedBooks = await context.Orders
+            .Include(o => o.OrderItems)
+            .ThenInclude(oi => oi.Book)
+            .Where(o => o.OrderItems.Any(oi => oi.Book!.Id == Id))
+            .SelectMany(o => o.OrderItems)
+            .Where(oi => oi.Book!.Id != Id)
+            .Select(oi => oi.Book!)
+            .Distinct()
+            .ToListAsync();
     }
 
     private void AddToCart(Book book)
