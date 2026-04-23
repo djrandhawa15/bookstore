@@ -81,7 +81,7 @@ else
     [SupplyParameterFromQuery]
     private int Id { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
         using var context = DbFactory.CreateDbContext();
         book = await context.Books.FirstOrDefaultAsync(m => m.Id == Id);
